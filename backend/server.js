@@ -63,7 +63,7 @@ function keepalive() {
     setInterval(() => {
         i = (i + 1) % 6;
         console.log("server is alive");
-    }, 60000);
+    }, 30000);
 }
 }
 
