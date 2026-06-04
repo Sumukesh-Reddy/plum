@@ -43,6 +43,16 @@ export const claimApi = {
   // Delete claim
   deleteClaim: (id) => api.delete(`/claims/${id}`),
 
+  // Override/Adjudicate claim decision
+  overrideClaim: (id, decision, approvedAmount, notes) => 
+    api.put(`/claims/${id}/override`, { decision, approvedAmount, notes }),
+
+  // Get policy configuration
+  getPolicy: () => api.get('/claims/policy'),
+
+  // Update policy configuration
+  updatePolicy: (policyData) => api.put('/claims/policy', policyData),
+
   // Health check
   health: () => axios.get(`${API_BASE}/health`).then(r => r.data),
 };

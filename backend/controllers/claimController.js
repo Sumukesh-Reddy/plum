@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const Claim = require('../models/Claim');
 const AuditLog = require('../models/AuditLog');
@@ -83,8 +84,42 @@ exports.createClaim = async (req, res, next) => {
       throw new Error(`Could not extract any data from the uploaded documents. Underlying cause: ${realReason}`);
     }
 
+    // Check for duplicate claim in DB (similar patient, date and bill amount)
+    let isDuplicate = false;
+    let duplicateClaimId = null;
+    try {
+      if (extractedData.patient_name && extractedData.treatment_date) {
+        const existingClaim = await Claim.findOne({
+          patientName: extractedData.patient_name,
+          treatmentDate: new Date(extractedData.treatment_date),
+          billAmount: extractedData.bill_amount || 0,
+          status: 'completed',
+          claimId: { $ne: claimId }
+        });
+        
+        if (existingClaim) {
+          isDuplicate = true;
+          duplicateClaimId = existingClaim.claimId;
+          console.log(`⚠️ Duplicate claim detected: matches ${duplicateClaimId}`);
+        }
+      }
+    } catch (dbErr) {
+      console.warn('Duplicate check skipped/failed (e.g. no DB connection):', dbErr.message);
+    }
+
     // Run adjudication
     const adjudicationResult = processAdjudication(extractedData, claimId);
+
+    // If duplicate, append warnings and force manual review
+    if (isDuplicate) {
+      extractedData.is_duplicate = true;
+      extractedData.duplicate_claim_id = duplicateClaimId;
+      
+      adjudicationResult.decision = 'MANUAL_REVIEW';
+      adjudicationResult.rejection_reasons.push('POTENTIAL_DUPLICATE');
+      adjudicationResult.notes.unshift(`⚠️ WARNING: A claim with identical patient name, treatment date, and amount already exists (Claim ID: ${duplicateClaimId})`);
+      adjudicationResult.next_steps = 'Referred to manual review to verify potential duplicate submission';
+    }
 
     const processingTime = Date.now() - startTime;
 
@@ -222,6 +257,99 @@ exports.deleteClaim = async (req, res, next) => {
     }
 
     res.json({ success: true, message: 'Claim deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// PUT /api/claims/:id/override — Override claim decision (Appeals / Manual Review)
+exports.overrideClaim = async (req, res, next) => {
+  try {
+    const { decision, approvedAmount, notes } = req.body;
+    
+    if (!decision) {
+      return res.status(400).json({ success: false, error: 'Decision status is required' });
+    }
+
+    let claim;
+    try {
+      claim = await Claim.findOne({ claimId: req.params.id });
+    } catch (dbErr) {
+      console.warn('DB read skipped:', dbErr.message);
+    }
+
+    if (!claim) {
+      return res.status(404).json({ success: false, error: 'Claim not found' });
+    }
+
+    // Merge notes if provided
+    const newNotes = Array.isArray(notes) 
+      ? notes 
+      : (notes ? [notes] : []);
+    const mergedNotes = [...(claim.decision?.notes || []), ...newNotes];
+
+    const updatedDecision = {
+      decision,
+      approvedAmount: Number(approvedAmount) || 0,
+      rejectionReasons: decision === 'APPROVED' ? [] : (claim.decision?.rejectionReasons || []),
+      confidenceScore: 1.0, // Manual override has 100% confidence
+      notes: mergedNotes,
+      nextSteps: decision === 'APPROVED' ? 'Payout processed' : 'Claim rejected by manual reviewer'
+    };
+
+    // Update in DB
+    try {
+      claim = await Claim.findOneAndUpdate(
+        { claimId: req.params.id },
+        { decision: updatedDecision },
+        { new: true }
+      );
+      
+      await AuditLog.create({
+        claimId: req.params.id,
+        action: 'CLAIM_OVERRIDDEN',
+        details: { decision, approvedAmount }
+      });
+    } catch (dbErr) {
+      console.warn('DB update skipped:', dbErr.message);
+      // Fallback for non-DB mode
+      claim.decision = updatedDecision;
+    }
+
+    res.json({
+      success: true,
+      message: 'Claim decision overridden successfully',
+      data: claim
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// GET /api/claims/policy — Retrieve current policy terms configuration
+exports.getPolicy = async (req, res, next) => {
+  try {
+    const policyPath = path.join(__dirname, '..', 'policy_terms.json');
+    const policy = JSON.parse(fs.readFileSync(policyPath, 'utf8'));
+    res.json({ success: true, data: policy });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// PUT /api/claims/policy — Update policy terms configuration
+exports.updatePolicy = async (req, res, next) => {
+  try {
+    const policyPath = path.join(__dirname, '..', 'policy_terms.json');
+    const newPolicy = req.body;
+
+    if (!newPolicy || typeof newPolicy !== 'object') {
+      return res.status(400).json({ success: false, error: 'Invalid policy payload' });
+    }
+
+    fs.writeFileSync(policyPath, JSON.stringify(newPolicy, null, 2), 'utf8');
+    
+    res.json({ success: true, message: 'Policy terms updated successfully', data: newPolicy });
   } catch (error) {
     next(error);
   }

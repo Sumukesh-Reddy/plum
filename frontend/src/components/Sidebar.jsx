@@ -4,6 +4,7 @@ const links = [
   { to: '/',        label: 'Dashboard' },
   { to: '/upload',  label: 'Submit Claim' },
   { to: '/history', label: 'History' },
+  { to: '/policy',  label: 'Policy Settings' },
 ];
 
 export default function Sidebar() {

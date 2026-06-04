@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import UploadClaim from './pages/UploadClaim';
 import ClaimResult from './pages/ClaimResult';
 import ClaimHistory from './pages/ClaimHistory';
+import PolicyConfig from './pages/PolicyConfig';
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
           <Route path="/result/:id" element={<ClaimResult />} />
           <Route path="/claims/:id" element={<ClaimResult />} />
           <Route path="/history"    element={<ClaimHistory />} />
+          <Route path="/policy"     element={<PolicyConfig />} />
         </Routes>
       </main>
     </div>

@@ -29,14 +29,59 @@ export default function ClaimResult() {
   const [claimData, setClaimData] = useState(location.state?.result || null);
   const [loading, setLoading] = useState(!claimData);
 
+  // Manual Review Form State
+  const [reviewDecision, setReviewDecision] = useState('APPROVED');
+  const [overrideAmount, setOverrideAmount] = useState('');
+  const [reviewerNotes, setReviewerNotes] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState(null);
+
+  // Initialize override amount when claimData is loaded
   useEffect(() => {
-    if (!claimData && id) {
+    if (claimData) {
+      const adj = claimData.adjudication || claimData.decision;
+      const ext = claimData.extracted || claimData.extractedData;
+      setOverrideAmount(adj?.approvedAmount || adj?.approved_amount || ext?.bill_amount || 0);
+    }
+  }, [claimData]);
+
+  useEffect(() => {
+    if (location.state?.result && id === location.state.result.claimId) {
+      setClaimData(location.state.result);
+      setLoading(false);
+    } else if (id) {
+      setLoading(true);
       claimApi.getClaim(id)
         .then(res => setClaimData(res.data || res))
         .catch(console.error)
         .finally(() => setLoading(false));
     }
-  }, [id, claimData]);
+  }, [id, location.state]);
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    setSubmittingReview(true);
+    setReviewError(null);
+    try {
+      const claimId = claimData.claimId;
+      const res = await claimApi.overrideClaim(
+        claimId,
+        reviewDecision,
+        reviewDecision === 'APPROVED' ? Number(overrideAmount) : 0,
+        reviewerNotes || 'Manual adjudication review override'
+      );
+      if (res.success && res.data) {
+        setClaimData(res.data);
+        setReviewerNotes('');
+      } else {
+        setReviewError('Failed to update decision');
+      }
+    } catch (err) {
+      setReviewError(err.message || 'An error occurred during review override');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -72,6 +117,34 @@ export default function ClaimResult() {
         {claimData.claimId}
         {processingMs > 0 && <span style={{ marginLeft: 12, color: '#aaa' }}>({(processingMs/1000).toFixed(1)}s)</span>}
       </p>
+
+      {/* Duplicate warning banner */}
+      {extracted?.is_duplicate && (
+        <div 
+          className="alert" 
+          style={{ 
+            marginBottom: 20, 
+            backgroundColor: '#fffbeb', 
+            border: '2px dashed #d97706', 
+            borderRadius: '6px',
+            color: '#b45309',
+            padding: '16px',
+            fontSize: '14px',
+            lineHeight: '1.5'
+          }}
+        >
+          <strong>⚠️ POTENTIAL DUPLICATE DETECTED:</strong> A claim with the identical patient name, treatment date, and bill amount already exists in the database.
+          <div style={{ marginTop: 8 }}>
+            <strong>Matching Claim ID:</strong>{' '}
+            <Link 
+              to={`/claims/${extracted.duplicate_claim_id}`} 
+              style={{ color: '#b45309', fontWeight: 'bold', textDecoration: 'underline' }}
+            >
+              {extracted.duplicate_claim_id}
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Decision */}
       {adjudication && (
@@ -117,6 +190,92 @@ export default function ClaimResult() {
               <strong>Next Steps: </strong>{adjudication.next_steps}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Admin Manual Review Panel */}
+      {decision === 'MANUAL_REVIEW' && (
+        <div className="card" style={{ border: '2px solid #2563eb', backgroundColor: '#eff6ff', margin: '20px 0' }}>
+          <div className="section-title" style={{ color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: 8 }}>
+            🛡️ Admin Manual Review Panel
+          </div>
+          <p style={{ fontSize: 13, color: '#1e40af', marginBottom: 16 }}>
+            This claim requires manual review. As an administrator, you can override the AI decision below.
+          </p>
+
+          {reviewError && <div className="alert alert-error" style={{ marginBottom: 16 }}>{reviewError}</div>}
+
+          <form onSubmit={handleReviewSubmit}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
+                  Decision Status
+                </label>
+                <select
+                  className="input"
+                  value={reviewDecision}
+                  onChange={(e) => {
+                    setReviewDecision(e.target.value);
+                    if (e.target.value === 'REJECTED') {
+                      setOverrideAmount(0);
+                    } else {
+                      const adj = claimData.adjudication || claimData.decision;
+                      const ext = claimData.extracted || claimData.extractedData;
+                      setOverrideAmount(adj?.approvedAmount || adj?.approved_amount || ext?.bill_amount || 0);
+                    }
+                  }}
+                  disabled={submittingReview}
+                  style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                >
+                  <option value="APPROVED">Approve Claim</option>
+                  <option value="REJECTED">Reject Claim</option>
+                </select>
+              </div>
+
+              {reviewDecision === 'APPROVED' && (
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
+                    Approved Amount (₹)
+                  </label>
+                  <input
+                    type="number"
+                    className="input"
+                    value={overrideAmount}
+                    onChange={(e) => setOverrideAmount(e.target.value)}
+                    disabled={submittingReview}
+                    min="0"
+                    style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                    required
+                  />
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
+                Reviewer Notes / Rationale
+              </label>
+              <textarea
+                className="input"
+                value={reviewerNotes}
+                onChange={(e) => setReviewerNotes(e.target.value)}
+                placeholder="Enter clinical or administrative justification for this override..."
+                disabled={submittingReview}
+                rows="3"
+                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', resize: 'vertical' }}
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={submittingReview}
+              style={{ backgroundColor: '#2563eb', border: 'none', padding: '10px 20px', color: 'white', borderRadius: '4px', cursor: 'pointer' }}
+            >
+              {submittingReview ? 'Submitting Override...' : 'Submit Final Adjudication'}
+            </button>
+          </form>
         </div>
       )}
 
