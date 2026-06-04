@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { claimApi } from '../api/claimApi';
+import { claimApi, API_BASE } from '../api/claimApi';
 import StatusBadge from '../components/StatusBadge';
 
 export default function Dashboard() {
@@ -36,7 +36,7 @@ export default function Dashboard() {
 
       {backendOnline === false && (
         <div className="alert alert-error">
-          ⚠ Backend offline — start the server at http://localhost:3000
+          ⚠ Backend offline — start the server at {API_BASE}
         </div>
       )}
 
