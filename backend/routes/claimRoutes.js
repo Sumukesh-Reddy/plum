@@ -8,7 +8,8 @@ const {
   deleteClaim,
   overrideClaim,
   getPolicy,
-  updatePolicy
+  updatePolicy,
+  evaluateAdjudicator
 } = require('../controllers/claimController');
 
 // POST /api/claims — Upload documents and process claim
@@ -16,6 +17,9 @@ router.post('/', upload.array('documents', 10), createClaim);
 
 // GET /api/claims — List all claims
 router.get('/', getClaims);
+
+// GET /api/claims/evaluate — Retrieve accuracy and validation metrics
+router.get('/evaluate', evaluateAdjudicator);
 
 // GET /api/claims/policy — Retrieve current policy terms configuration
 router.get('/policy', getPolicy);

@@ -5,6 +5,7 @@ import UploadClaim from './pages/UploadClaim';
 import ClaimResult from './pages/ClaimResult';
 import ClaimHistory from './pages/ClaimHistory';
 import PolicyConfig from './pages/PolicyConfig';
+import EvaluationMetrics from './pages/EvaluationMetrics';
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="/claims/:id" element={<ClaimResult />} />
           <Route path="/history"    element={<ClaimHistory />} />
           <Route path="/policy"     element={<PolicyConfig />} />
+          <Route path="/metrics"    element={<EvaluationMetrics />} />
         </Routes>
       </main>
     </div>

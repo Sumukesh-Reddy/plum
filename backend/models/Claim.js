@@ -32,7 +32,8 @@ const claimSchema = new mongoose.Schema({
     rejectionReasons: [String],
     confidenceScore: { type: Number, default: 0 },
     notes: [String],
-    nextSteps: String
+    nextSteps: String,
+    validationSteps: { type: Array, default: [] }
   },
   processingTime: { type: Number }, // ms
   error: { type: String }

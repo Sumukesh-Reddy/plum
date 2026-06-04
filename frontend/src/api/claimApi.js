@@ -53,6 +53,9 @@ export const claimApi = {
   // Update policy configuration
   updatePolicy: (policyData) => api.put('/claims/policy', policyData),
 
+  // Get AI rules engine evaluation metrics
+  getEvaluationMetrics: () => api.get('/claims/evaluate'),
+
   // Health check
   health: () => axios.get(`${API_BASE}/health`).then(r => r.data),
 };

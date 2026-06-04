@@ -7,6 +7,9 @@ export default function UploadClaim() {
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [loadingStep, setLoadingStep] = useState(0);
+  const [errorStep, setErrorStep] = useState(null);
+  const [processingError, setProcessingError] = useState(null);
   const navigate = useNavigate();
 
   const addFiles = (newFiles) => {
@@ -32,21 +35,195 @@ export default function UploadClaim() {
     if (files.length === 0) { setError('Please upload at least one document.'); return; }
     setError(null);
     setLoading(true);
+    setLoadingStep(0);
+    setErrorStep(null);
+    setProcessingError(null);
+
+    // Simulate progress updates
+    let step = 0;
+    const interval = setInterval(() => {
+      if (step < 3) {
+        step++;
+        setLoadingStep(step);
+      }
+    }, 1200);
+
     try {
       const result = await claimApi.createClaim(files);
-      const claimId = result.data?.claimId || result.claimId;
-      navigate(`/result/${claimId}`, { state: { result: result.data || result } });
+      clearInterval(interval);
+      setLoadingStep(4); // anti-fraud / verification step
+      
+      setTimeout(() => {
+        const claimId = result.data?.claimId || result.claimId;
+        navigate(`/result/${claimId}`, { state: { result: result.data || result } });
+      }, 800);
     } catch (err) {
-      setError(err.message || 'Failed to process claim. Please try again.');
-      setLoading(false);
+      clearInterval(interval);
+      // Guess failed step based on error text
+      let failedStepIdx = 1;
+      const errMsg = (err.message || '').toLowerCase();
+      if (errMsg.includes('upload') || errMsg.includes('multipart') || errMsg.includes('file size')) {
+        failedStepIdx = 0;
+      } else if (errMsg.includes('adjudic') || errMsg.includes('rule') || errMsg.includes('policy')) {
+        failedStepIdx = 3;
+      } else if (errMsg.includes('patient') || errMsg.includes('doctor') || errMsg.includes('license') || errMsg.includes('registration')) {
+        failedStepIdx = 2;
+      }
+      
+      setErrorStep(failedStepIdx);
+      setLoadingStep(failedStepIdx);
+      setProcessingError(err.message || 'Processing failed. Please check the document legibility.');
     }
   };
 
+  const processingSteps = [
+    { label: 'Uploading document files...', idx: 0 },
+    { label: 'Running AI OCR Text Extraction...', idx: 1 },
+    { label: 'Validating Patient & Doctor Credentials...', idx: 2 },
+    { label: 'Executing Rules Engine checks (If-Else gates)...', idx: 3 },
+    { label: 'Verifying Anti-Fraud & Duplicate Claims...', idx: 4 }
+  ];
+
   if (loading) {
+    const isError = errorStep !== null;
     return (
-      <div className="loading-overlay">
-        <div className="spinner"></div>
-        <span>Processing claim — this may take up to 30 seconds...</span>
+      <div className="loading-overlay" style={{ backgroundColor: 'rgba(255, 255, 255, 0.96)', transition: 'opacity 0.2s ease-in-out' }}>
+        <div 
+          className="card" 
+          style={{ 
+            width: '100%', 
+            maxWidth: '460px', 
+            padding: '24px', 
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            border: isError ? '1px solid #fecaca' : '1px solid #e5e7eb',
+            backgroundColor: '#ffffff'
+          }}
+        >
+          <div style={{ textAlign: 'center', marginBottom: 20 }}>
+            {isError ? (
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                backgroundColor: '#fee2e2',
+                color: '#dc2626',
+                fontSize: '22px',
+                fontWeight: 'bold',
+                marginBottom: '12px'
+              }}>
+                ⚠️
+              </div>
+            ) : (
+              <div className="spinner" style={{ margin: '0 auto 12px', width: '36px', height: '36px' }}></div>
+            )}
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#111827' }}>
+              {isError ? 'Processing Terminated' : 'Adjudicating OPD Claim...'}
+            </h3>
+            <p style={{ fontSize: '12px', color: '#6b7280', marginTop: 4 }}>
+              {isError ? 'Claims engine encountered an execution error' : 'Analyzing document photos & parsing claims data'}
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 20 }}>
+            {processingSteps.map((step) => {
+              const stepIdx = step.idx;
+              const isCompleted = loadingStep > stepIdx && !isError;
+              const isCurrent = loadingStep === stepIdx && !isError;
+              const isPending = loadingStep < stepIdx;
+              const isFailedStep = isError && errorStep === stepIdx;
+              const isPastBeforeFail = isError && stepIdx < errorStep;
+
+              let iconBg = '#ffffff';
+              let iconBorder = '2px solid #d1d5db';
+              let iconColor = '#9ca3af';
+              let iconContent = '';
+              let labelColor = '#6b7280';
+              let labelWeight = 'normal';
+
+              if (isCompleted || isPastBeforeFail) {
+                iconBg = '#16a34a';
+                iconBorder = 'none';
+                iconColor = '#ffffff';
+                iconContent = '✓';
+                labelColor = '#111827';
+              } else if (isCurrent) {
+                iconBg = '#eff6ff';
+                iconBorder = 'none';
+                iconColor = '#1d4ed8';
+                labelColor = '#1d4ed8';
+                labelWeight = 'bold';
+              } else if (isFailedStep) {
+                iconBg = '#dc2626';
+                iconBorder = 'none';
+                iconColor = '#ffffff';
+                iconContent = '✗';
+                labelColor = '#dc2626';
+                labelWeight = 'bold';
+              }
+
+              return (
+                <div key={stepIdx} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '22px',
+                      height: '22px',
+                      borderRadius: '50%',
+                      backgroundColor: iconBg,
+                      border: iconBorder,
+                      color: iconColor,
+                      fontSize: '12px',
+                      fontWeight: '900',
+                      flexShrink: 0
+                    }}>
+                      {isCurrent ? (
+                        <div className="spinner" style={{ width: '10px', height: '10px', borderWidth: '2px', borderTopColor: '#1d4ed8' }}></div>
+                      ) : iconContent}
+                    </div>
+                    <span style={{ fontSize: '13px', color: labelColor, fontWeight: labelWeight }}>
+                      {step.label}
+                    </span>
+                  </div>
+
+                  {isFailedStep && processingError && (
+                    <div style={{
+                      marginLeft: 34,
+                      marginTop: 4,
+                      fontSize: '11px',
+                      color: '#b91c1c',
+                      backgroundColor: '#fef2f2',
+                      padding: '8px 12px',
+                      borderRadius: '4px',
+                      border: '1px solid #fca5a5',
+                      fontFamily: 'monospace',
+                      whiteSpace: 'pre-wrap'
+                    }}>
+                      {processingError}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {isError && (
+            <button
+              onClick={() => {
+                setLoading(false);
+                setError(processingError);
+              }}
+              className="btn btn-secondary"
+              style={{ width: '100%', marginTop: 24, display: 'block', padding: '10px' }}
+            >
+              Go Back & Edit Uploads
+            </button>
+          )}
+        </div>
       </div>
     );
   }

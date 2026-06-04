@@ -139,7 +139,8 @@ exports.createClaim = async (req, res, next) => {
         rejectionReasons: adjudicationResult.rejection_reasons,
         confidenceScore: adjudicationResult.confidence_score,
         notes: adjudicationResult.notes,
-        nextSteps: adjudicationResult.next_steps
+        nextSteps: adjudicationResult.next_steps,
+        validationSteps: adjudicationResult.validation_steps || []
       },
       processingTime
     };
@@ -170,7 +171,8 @@ exports.createClaim = async (req, res, next) => {
           rejection_reasons: adjudicationResult.rejection_reasons,
           confidence_score: adjudicationResult.confidence_score,
           notes: adjudicationResult.notes,
-          next_steps: adjudicationResult.next_steps
+          next_steps: adjudicationResult.next_steps,
+          validation_steps: adjudicationResult.validation_steps || []
         }
       }
     });
@@ -350,6 +352,120 @@ exports.updatePolicy = async (req, res, next) => {
     fs.writeFileSync(policyPath, JSON.stringify(newPolicy, null, 2), 'utf8');
     
     res.json({ success: true, message: 'Policy terms updated successfully', data: newPolicy });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// GET /api/claims/evaluate — Run test suite and return rules engine accuracy metrics
+exports.evaluateAdjudicator = async (req, res, next) => {
+  try {
+    const testCasesPath = path.join(__dirname, '..', 'test_cases.json');
+    const { test_cases: testCases } = JSON.parse(fs.readFileSync(testCasesPath, 'utf8'));
+    
+    const adjudicate = require('../adjudicator');
+    
+    let correctDecisions = 0;
+    let totalAmountError = 0;
+    
+    const classes = ['APPROVED', 'REJECTED', 'PARTIAL', 'MANUAL_REVIEW'];
+    const stats = {};
+    classes.forEach(c => {
+      stats[c] = { tp: 0, fp: 0, fn: 0, tn: 0 };
+    });
+    
+    const individualResults = [];
+    
+    testCases.forEach((tc) => {
+      const prescription = tc.input_data.documents?.prescription || {};
+      const bill = tc.input_data.documents?.bill || {};
+      
+      const mappedData = {
+        claim_id: tc.case_id || 'TC_TEST',
+        total_amount: tc.input_data.claim_amount || 0,
+        diagnosis: prescription.diagnosis || '',
+        doctor_reg: prescription.doctor_reg || '',
+        doctor_name: prescription.doctor_name || '',
+        hospital: tc.input_data.hospital || '',
+        documents: {
+          prescription: !!tc.input_data.documents?.prescription,
+          bill: !!tc.input_data.documents?.bill
+        },
+        treatment_date: tc.input_data.treatment_date || '2024-11-01',
+        submission_date: tc.input_data.treatment_date || '2024-11-01',
+        member_join_date: tc.input_data.member_join_date || '2024-01-01',
+        policy_active: tc.input_data.policy_active !== false,
+        member_covered: tc.input_data.member_covered !== false,
+        documents_legible: tc.input_data.documents_legible !== false,
+        pre_auth: tc.input_data.pre_auth !== false,
+        consultation_fee: bill.consultation_fee || 0,
+        bill: bill,
+        procedures: prescription.procedures || [],
+        previous_claims_amount: tc.input_data.previous_claims_amount || 0,
+        previous_claims_same_day: tc.input_data.previous_claims_same_day || 0
+      };
+      
+      const result = adjudicate(mappedData);
+      
+      const expected = tc.expected_output.decision;
+      const actual = result.decision;
+      const expectedAmt = tc.expected_output.approved_amount || 0;
+      const actualAmt = result.approved_amount || 0;
+      
+      const decisionMatch = expected === actual;
+      if (decisionMatch) correctDecisions++;
+      
+      totalAmountError += Math.abs(expectedAmt - actualAmt);
+      
+      classes.forEach(c => {
+        if (expected === c && actual === c) stats[c].tp++;
+        else if (expected !== c && actual === c) stats[c].fp++;
+        else if (expected === c && actual !== c) stats[c].fn++;
+        else stats[c].tn++;
+      });
+      
+      individualResults.push({
+        id: tc.case_id,
+        name: tc.case_name,
+        description: tc.description,
+        expectedDecision: expected,
+        actualDecision: actual,
+        expectedAmount: expectedAmt,
+        actualAmount: actualAmt,
+        passed: decisionMatch
+      });
+    });
+    
+    const accuracy = correctDecisions / testCases.length;
+    const mae = totalAmountError / testCases.length;
+    
+    const classMetrics = {};
+    classes.forEach(c => {
+      const { tp, fp, fn } = stats[c];
+      const precision = tp + fp > 0 ? tp / (tp + fp) : 0;
+      const recall = tp + fn > 0 ? tp / (tp + fn) : 0;
+      const f1 = precision + recall > 0 ? 2 * (precision * recall) / (precision + recall) : 0;
+      classMetrics[c] = {
+        precision,
+        recall,
+        f1Score: f1,
+        support: tp + fn
+      };
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        summary: {
+          totalCases: testCases.length,
+          passedCases: correctDecisions,
+          accuracy,
+          mae
+        },
+        classMetrics,
+        results: individualResults
+      }
+    });
   } catch (error) {
     next(error);
   }

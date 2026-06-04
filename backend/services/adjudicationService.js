@@ -11,7 +11,7 @@ const processAdjudication = (extractedData, claimId) => {
 
     const result = adjudicate(dataWithId);
 
-    // Ensure confidence score is a percentage-friendly number
+    
     if (result.confidence_score > 1) {
       result.confidence_score = result.confidence_score / 100;
     }
