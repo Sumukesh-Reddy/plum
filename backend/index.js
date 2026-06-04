@@ -47,9 +47,7 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Plum API Server running on port ${PORT}`);
-  console.log(`📋 Health check: http://localhost:${PORT}/health`);
-  console.log(`📁 Claims API: http://localhost:${PORT}/api/claims`);
+  console.log(` Plum API Server running on port ${PORT}`);
 });
 
 module.exports = app;
