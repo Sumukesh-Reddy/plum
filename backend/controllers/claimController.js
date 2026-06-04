@@ -53,15 +53,13 @@ exports.createClaim = async (req, res, next) => {
           const text = await extractText(file.path, file.mimetype);
           combinedText += '\n' + cleanText(text);
         } else {
-          // For images: use GPT-4o Vision directly (more accurate than Tesseract)
-          if (!extractedData) {
-            extractedData = await extractFromImageDirect(file.path, file.mimetype);
-            console.log('Vision extraction succeeded:', JSON.stringify(extractedData, null, 2));
-          } else {
-            // Fallback OCR for additional images
-            const text = await extractText(file.path, file.mimetype);
-            combinedText += '\n' + cleanText(text);
-          }
+          // For images: use Gemini Vision for every document. Bills/reports often
+          // lose critical fields such as totals when downgraded to OCR text.
+          const visionData = await extractFromImageDirect(file.path, file.mimetype);
+          extractedData = extractedData
+            ? mergeExtractedData(extractedData, visionData)
+            : visionData;
+          console.log('Merged vision extraction:', JSON.stringify(extractedData, null, 2));
         }
       } catch (fileErr) {
         console.error(`❌ Error processing file ${file.originalname}:`, fileErr.message);
@@ -471,13 +469,38 @@ exports.evaluateAdjudicator = async (req, res, next) => {
   }
 };
 
-// Helper: merge two extraction results, preferring non-null values
+const isMissingValue = (value) => {
+  if (value === null || value === undefined || value === '') return true;
+  if (typeof value === 'number' && value === 0) return true;
+  if (Array.isArray(value) && value.length === 0) return true;
+  return false;
+};
+
+const mergeUniqueArray = (a = [], b = []) => {
+  const values = [...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])];
+  return [...new Set(values.filter(Boolean))];
+};
+
+// Helper: merge multiple document extractions into one claim-level record.
 const mergeExtractedData = (primary, secondary) => {
   const merged = { ...primary };
+
   for (const key of Object.keys(secondary)) {
-    if ((merged[key] === null || merged[key] === '' || merged[key] === 0) && secondary[key]) {
+    if (key === 'medicines' || key === 'test_names') {
+      merged[key] = mergeUniqueArray(merged[key], secondary[key]);
+    } else if (key === 'bill_amount' || key === 'consultation_fee') {
+      merged[key] = Math.max(Number(merged[key]) || 0, Number(secondary[key]) || 0);
+    } else if (key === 'documents_legible') {
+      merged[key] = merged[key] !== false || secondary[key] !== false;
+    } else if (key === 'documents') {
+      merged[key] = {
+        ...(merged[key] || {}),
+        ...(secondary[key] || {})
+      };
+    } else if (isMissingValue(merged[key]) && !isMissingValue(secondary[key])) {
       merged[key] = secondary[key];
     }
   }
+
   return merged;
 };
