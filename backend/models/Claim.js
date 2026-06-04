@@ -40,7 +40,6 @@ const claimSchema = new mongoose.Schema({
   timestamps: true
 });
 
-claimSchema.index({ claimId: 1 });
 claimSchema.index({ status: 1 });
 claimSchema.index({ createdAt: -1 });
 claimSchema.index({ patientName: 'text', diagnosis: 'text' });
