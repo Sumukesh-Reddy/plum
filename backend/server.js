@@ -18,10 +18,9 @@ app.post('/api/extract', upload.single('document'), async (req, res) => {
             return res.status(400).json({ error: "No file uploaded" });
         }
 
-        // Convert file buffer to base64 for LLM input
         const fileBase64 = req.file.buffer.toString('base64');
 
-        // 1. AI Extraction Phase
+
         const completion = await openai.chat.completions.create({
             model: "gpt-4o",
             messages: [
@@ -58,5 +57,16 @@ app.post('/api/extract', upload.single('document'), async (req, res) => {
     }
 });
 
+function keepalive() {
+    let i = 0;
+    while(true){
+    setInterval(() => {
+        i = (i + 1) % 6;
+        console.log("server is alive");
+    }, 60000);
+}
+}
+
+keepalive();
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
