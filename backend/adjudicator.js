@@ -44,12 +44,28 @@ function adjudicate(extractedData) {
         addStep("Policy Active Status", "PASS", "Insurance policy scheme is currently active");
     }
 
-    if (!extractedData.member_covered) {
+    const coveredMembers = policy.covered_members || [];
+    const patientNameClean = (extractedData.patient_name || "").trim().toLowerCase();
+    let isMemberCovered = extractedData.member_covered;
+
+    if (coveredMembers.length > 0 && patientNameClean) {
+        const isCovered = coveredMembers.some(m => {
+            const memberNameClean = m.toLowerCase();
+            return patientNameClean === memberNameClean || 
+                   patientNameClean.includes(memberNameClean) || 
+                   memberNameClean.includes(patientNameClean);
+        });
+        if (!isCovered) {
+            isMemberCovered = false;
+        }
+    }
+
+    if (!isMemberCovered) {
         result.decision = "REJECTED";
         result.rejection_reasons.push("MEMBER_NOT_COVERED");
-        addStep("Member Coverage Status", "FAIL", "Member profile is not covered under this employer group plan");
+        addStep("Member Coverage Status", "FAIL", `Member profile '${extractedData.patient_name || "Unknown"}' is not covered under this employer group plan`);
     } else {
-        addStep("Member Coverage Status", "PASS", "Member profile is eligible and covered under this plan");
+        addStep("Member Coverage Status", "PASS", `Member profile '${extractedData.patient_name || "Unknown"}' is eligible and covered under this plan`);
     }
 
     // ===============================

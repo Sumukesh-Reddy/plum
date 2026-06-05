@@ -1,6 +1,18 @@
 {
   "policy_id": "PLUM_OPD_2024",
   "policy_name": "Plum OPD Advantage",
+  "covered_members": [
+    "Rajesh Kumar",
+    "Priya Singh",
+    "Amit Verma",
+    "Sneha Reddy",
+    "Vikram Joshi",
+    "Kavita Nair",
+    "Suresh Patil",
+    "Ravi Menon",
+    "Anita Desai",
+    "Deepak Shah"
+  ],
   "effective_date": "2024-01-01",
   "policy_holder": {
     "company": "TechCorp Solutions Pvt Ltd",
