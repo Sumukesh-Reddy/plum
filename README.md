@@ -2,6 +2,8 @@
 
 An AI-powered full-stack application for automating Outpatient Department (OPD) insurance claim adjudication. Users upload medical documents such as prescriptions, pharmacy bills, diagnostic reports, and invoices. The backend extracts structured claim data with Gemini/OCR, evaluates the claim against configurable policy terms, and returns an approval, rejection, partial approval, or manual review decision with reasoning.
 
+**Live Deployed Application:** [https://plum-ai-rho.vercel.app](https://plum-ai-rho.vercel.app)
+
 This project was built for the Plum AI Automation Engineer intern assignment.
 
 ## Features
