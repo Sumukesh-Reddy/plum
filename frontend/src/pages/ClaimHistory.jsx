@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { FilePlus2, RefreshCw, Search } from 'lucide-react';
 import { claimApi } from '../api/claimApi';
 import StatusBadge from '../components/StatusBadge';
 
@@ -9,6 +10,7 @@ export default function ClaimHistory() {
   const [claims, setClaims] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({});
   const [deleting, setDeleting] = useState(null);
@@ -46,12 +48,17 @@ export default function ClaimHistory() {
     }
   };
 
-  const filtered = claims.filter(c =>
-    !search ||
-    c.claimId?.toLowerCase().includes(search.toLowerCase()) ||
-    c.patientName?.toLowerCase().includes(search.toLowerCase()) ||
-    c.diagnosis?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = claims.filter(c => {
+    const status = (c.decision?.decision || c.status || 'PENDING').toUpperCase();
+    const matchesStatus = statusFilter === 'ALL' || status === statusFilter;
+    const matchesSearch = !search ||
+      c.claimId?.toLowerCase().includes(search.toLowerCase()) ||
+      c.patientName?.toLowerCase().includes(search.toLowerCase()) ||
+      c.diagnosis?.toLowerCase().includes(search.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
+
+  const statusOptions = ['ALL', 'APPROVED', 'REJECTED', 'PARTIAL', 'MANUAL_REVIEW'];
 
   const totalPages = pagination.pages || 1;
 
@@ -66,26 +73,44 @@ export default function ClaimHistory() {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-secondary" onClick={() => fetchClaims(page)} disabled={loading}>
+            <RefreshCw size={15} />
             {loading ? 'Loading...' : 'Refresh'}
           </button>
           <Link to="/upload">
-            <button className="btn btn-primary" id="history-new-claim-btn">+ New Claim</button>
+            <button className="btn btn-primary" id="history-new-claim-btn">
+              <FilePlus2 size={16} />
+              New Claim
+            </button>
           </Link>
         </div>
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      {/* Search */}
-      <input
-        type="text"
-        className="input"
-        placeholder="Search by claim ID, patient name, or diagnosis..."
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        id="history-search"
-        style={{ marginBottom: 12 }}
-      />
+      <div className="history-toolbar">
+        <label className="search-box">
+          <Search size={16} />
+          <input
+            type="text"
+            placeholder="Search by claim ID, patient, or diagnosis"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            id="history-search"
+          />
+        </label>
+        <div className="segmented-control">
+          {statusOptions.map(option => (
+            <button
+              key={option}
+              type="button"
+              className={statusFilter === option ? 'active' : ''}
+              onClick={() => setStatusFilter(option)}
+            >
+              {option === 'MANUAL_REVIEW' ? 'Review' : option.charAt(0) + option.slice(1).toLowerCase()}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Table */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -93,7 +118,7 @@ export default function ClaimHistory() {
           <p style={{ padding: 24, color: '#888' }}>Loading...</p>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 0', color: '#888' }}>
-            <p>{search ? 'No claims match your search.' : 'No claims yet.'}</p>
+            <p>{search || statusFilter !== 'ALL' ? 'No claims match your filters.' : 'No claims yet.'}</p>
             {!search && (
               <Link to="/upload">
                 <button className="btn btn-primary" style={{ marginTop: 12 }}>Submit Claim</button>

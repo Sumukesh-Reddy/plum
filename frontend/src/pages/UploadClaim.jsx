@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FileImage, FileText, Info, ShieldCheck, Trash2, UploadCloud } from 'lucide-react';
 import { claimApi } from '../api/claimApi';
 
 export default function UploadClaim() {
@@ -228,73 +229,117 @@ export default function UploadClaim() {
     );
   }
 
+  const totalSizeMb = files.reduce((sum, file) => sum + file.size, 0) / (1024 * 1024);
+  const hasPrescriptionLike = files.some(file => /prescription|rx|doctor/i.test(file.name));
+  const hasBillLike = files.some(file => /bill|invoice|receipt|pharmacy/i.test(file.name));
+
   return (
-    <div style={{ maxWidth: 600 }}>
-      <h1 className="page-title">Submit OPD Claim</h1>
-      <p className="page-subtitle">Upload your medical documents for adjudication</p>
+    <div className="upload-layout">
+      <div className="upload-main">
+        <h1 className="page-title">Submit OPD Claim</h1>
+        <p className="page-subtitle">Upload prescriptions, bills, and reports for AI-assisted adjudication</p>
 
-      {error && <div className="alert alert-error">{error}</div>}
+        {error && <div className="alert alert-error">{error}</div>}
 
-      {/* Dropzone */}
-      <div
-        className={`dropzone ${dragging ? 'active' : ''}`}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onClick={() => document.getElementById('file-input').click()}
-      >
-        <div className="dropzone-icon">📄</div>
-        <p style={{ fontWeight: 600, marginBottom: 4 }}>Drag & drop files here, or click to browse</p>
-        <p style={{ fontSize: 12, color: '#aaa' }}>PDF, JPG, PNG — max 10 MB each</p>
-        <input
-          id="file-input"
-          type="file"
-          multiple
-          accept=".pdf,.jpg,.jpeg,.png"
-          style={{ display: 'none' }}
-          onChange={e => addFiles(e.target.files)}
-        />
+        {/* Dropzone */}
+        <div
+          className={`dropzone ${dragging ? 'active' : ''}`}
+          onDrop={onDrop}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onClick={() => document.getElementById('file-input').click()}
+        >
+          <UploadCloud size={42} strokeWidth={1.8} />
+          <p style={{ fontWeight: 700, marginBottom: 4 }}>Drop files here or click to browse</p>
+          <p style={{ fontSize: 12, color: '#64748b' }}>PDF, JPG, PNG. Upload a prescription and bill together for best results.</p>
+          <input
+            id="file-input"
+            type="file"
+            multiple
+            accept=".pdf,.jpg,.jpeg,.png"
+            style={{ display: 'none' }}
+            onChange={e => addFiles(e.target.files)}
+          />
+        </div>
+
+        {/* File list */}
+        {files.length > 0 && (
+          <div className="file-panel">
+            <div className="section-header">
+              <span className="section-title">Selected Documents</span>
+              <span className="muted-text">{files.length} files, {totalSizeMb.toFixed(1)} MB</span>
+            </div>
+            <ul className="file-list">
+              {files.map((f, i) => {
+                const isPdf = f.type === 'application/pdf';
+                const FileIcon = isPdf ? FileText : FileImage;
+                return (
+                  <li className="file-item" key={`${f.name}-${i}`}>
+                    <span className="file-meta">
+                      <FileIcon size={18} />
+                      <span>
+                        <strong>{f.name}</strong>
+                        <small>{f.type || 'Document'} · {(f.size/1024).toFixed(0)} KB</small>
+                      </span>
+                    </span>
+                    <button
+                      className="btn btn-danger icon-btn"
+                      onClick={() => removeFile(i)}
+                      title="Remove file"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
+        <button
+          className="btn btn-primary"
+          style={{ width: '100%', padding: '12px', fontSize: 15, marginTop: 14 }}
+          onClick={handleSubmit}
+          disabled={files.length === 0}
+          id="submit-claim-btn"
+        >
+          <ShieldCheck size={17} />
+          {files.length > 0 ? `Analyze ${files.length} Document${files.length > 1 ? 's' : ''}` : 'Upload Documents to Continue'}
+        </button>
       </div>
 
-      {/* File list */}
-      {files.length > 0 && (
-        <ul className="file-list">
-          {files.map((f, i) => (
-            <li className="file-item" key={i}>
-              <span>📎 {f.name} <span style={{ color: '#aaa' }}>({(f.size/1024).toFixed(0)} KB)</span></span>
-              <button
-                className="btn btn-danger"
-                style={{ padding: '2px 10px', fontSize: 12 }}
-                onClick={() => removeFile(i)}
-              >
-                Remove
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <aside className="upload-side">
+        <div className="card">
+          <div className="section-title">Claim Readiness</div>
+          <div className="check-row good">
+            <ShieldCheck size={16} />
+            <span>PDF, JPG, PNG supported</span>
+          </div>
+          <div className={`check-row ${hasPrescriptionLike ? 'good' : ''}`}>
+            <FileText size={16} />
+            <span>Prescription included</span>
+          </div>
+          <div className={`check-row ${hasBillLike ? 'good' : ''}`}>
+            <FileText size={16} />
+            <span>Bill or receipt included</span>
+          </div>
+          <div className="hint-box">
+            <Info size={16} />
+            <span>Gemini runs once per image, so upload only the documents needed for the case while testing quota.</span>
+          </div>
+        </div>
 
-      {/* Accepted types */}
-      <div className="card" style={{ marginTop: 16 }}>
-        <strong style={{ fontSize: 13 }}>Accepted Documents</strong>
-        <ul style={{ marginTop: 8, paddingLeft: 18, color: '#555', fontSize: 13, lineHeight: 1.8 }}>
-          <li>Doctor Prescription</li>
-          <li>Medical Bills / Invoices</li>
-          <li>Pharmacy Receipts</li>
-          <li>Diagnostic Reports</li>
-          <li>Lab Test Reports</li>
-        </ul>
-      </div>
-
-      <button
-        className="btn btn-primary"
-        style={{ width: '100%', padding: '12px', fontSize: 15, marginTop: 4 }}
-        onClick={handleSubmit}
-        disabled={files.length === 0}
-        id="submit-claim-btn"
-      >
-        {files.length > 0 ? `Analyze ${files.length} Document${files.length > 1 ? 's' : ''}` : 'Upload Documents to Continue'}
-      </button>
+        <div className="card">
+          <div className="section-title">Accepted Documents</div>
+          <div className="doc-chip-list">
+            <span>Doctor prescription</span>
+            <span>Medical bill</span>
+            <span>Pharmacy receipt</span>
+            <span>Diagnostic report</span>
+            <span>Lab test report</span>
+          </div>
+        </div>
+      </aside>
     </div>
   );
 }

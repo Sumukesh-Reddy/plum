@@ -1,5 +1,6 @@
 import { useLocation, useParams, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { AlertTriangle, ArrowLeft, CheckCircle2, Clock3, FileText, IndianRupee, ShieldCheck, XCircle } from 'lucide-react';
 import { claimApi } from '../api/claimApi';
 
 const decisionClass = (d) => {
@@ -10,10 +11,17 @@ const decisionClass = (d) => {
 };
 
 const decisionLabel = (d) => {
-  if (d === 'APPROVED')      return '✓ Claim Approved';
-  if (d === 'REJECTED')      return '✗ Claim Rejected';
-  if (d === 'PARTIAL')       return '~ Partial Approval';
-  return '⏱ Manual Review Required';
+  if (d === 'APPROVED')      return 'Claim Approved';
+  if (d === 'REJECTED')      return 'Claim Rejected';
+  if (d === 'PARTIAL')       return 'Partial Approval';
+  return 'Manual Review Required';
+};
+
+const DecisionIcon = ({ decision }) => {
+  if (decision === 'APPROVED') return <CheckCircle2 size={24} />;
+  if (decision === 'REJECTED') return <XCircle size={24} />;
+  if (decision === 'PARTIAL') return <AlertTriangle size={24} />;
+  return <Clock3 size={24} />;
 };
 
 const Field = ({ label, value }) => (
@@ -106,11 +114,17 @@ export default function ClaimResult() {
   const decision     = adjudication?.decision;
   const processingMs = claimData.processingTime || 0;
   const validationSteps = adjudication?.validation_steps || adjudication?.validationSteps || [];
+  const approvedAmount = adjudication?.approved_amount ?? adjudication?.approvedAmount ?? 0;
+  const claimedAmount = extracted?.bill_amount || claimData.billAmount || 0;
+  const confidence = adjudication?.confidence_score ?? adjudication?.confidenceScore;
 
   return (
     <div>
       <div style={{ marginBottom: 16 }}>
-        <Link to="/history" style={{ color: '#1d4ed8', fontSize: 13 }}>← Back to History</Link>
+        <Link to="/history" className="back-link">
+          <ArrowLeft size={15} />
+          Back to History
+        </Link>
       </div>
 
       <h1 className="page-title">Claim Result</h1>
@@ -150,21 +164,46 @@ export default function ClaimResult() {
       {/* Decision */}
       {adjudication && (
         <div className={`decision-section ${decisionClass(decision)}`}>
-          <div className="decision-title">{decisionLabel(decision)}</div>
+          <div className="decision-header">
+            <div className="decision-title">
+              <DecisionIcon decision={decision} />
+              {decisionLabel(decision)}
+            </div>
+            {confidence != null && (
+              <span className="confidence-pill">{Math.round(confidence * 100)}% confidence</span>
+            )}
+          </div>
 
-          {adjudication.approved_amount > 0 && (
+          <div className="result-summary-grid">
+            <div className="result-summary-item">
+              <FileText size={18} />
+              <span>Claimed</span>
+              <strong>{claimedAmount > 0 ? `₹${claimedAmount.toLocaleString('en-IN')}` : '—'}</strong>
+            </div>
+            <div className="result-summary-item">
+              <IndianRupee size={18} />
+              <span>Approved</span>
+              <strong>{approvedAmount > 0 ? `₹${approvedAmount.toLocaleString('en-IN')}` : '₹0'}</strong>
+            </div>
+            <div className="result-summary-item">
+              <ShieldCheck size={18} />
+              <span>Status</span>
+              <strong>{decision?.replace('_', ' ') || '—'}</strong>
+            </div>
+            <div className="result-summary-item">
+              <Clock3 size={18} />
+              <span>Processing</span>
+              <strong>{processingMs > 0 ? `${(processingMs / 1000).toFixed(1)}s` : '—'}</strong>
+            </div>
+          </div>
+
+          {approvedAmount > 0 && (
             <div style={{ margin: '12px 0' }}>
               <div style={{ fontSize: 12, color: '#555', marginBottom: 2 }}>Approved Amount</div>
-              <div className="amount-display">₹{adjudication.approved_amount.toLocaleString('en-IN')}</div>
-              {adjudication.original_amount && adjudication.original_amount !== adjudication.approved_amount && (
+              <div className="amount-display">₹{approvedAmount.toLocaleString('en-IN')}</div>
+              {adjudication.original_amount && adjudication.original_amount !== approvedAmount && (
                 <div style={{ fontSize: 12, color: '#888' }}>Claimed: ₹{adjudication.original_amount.toLocaleString('en-IN')}</div>
               )}
-            </div>
-          )}
-
-          {adjudication.confidence_score != null && (
-            <div style={{ margin: '10px 0', fontSize: 13, color: '#555' }}>
-              Confidence: <strong>{Math.round(adjudication.confidence_score * 100)}%</strong>
             </div>
           )}
 
@@ -421,6 +460,7 @@ export default function ClaimResult() {
             <Field label="Member Covered"  value={extracted.member_covered ? 'Yes' : 'No'} />
             <Field label="Pre-Auth"        value={extracted.pre_auth ? 'Yes' : 'No'} />
             <Field label="Docs Legible"    value={extracted.documents_legible ? 'Yes' : 'No'} />
+            <Field label="Same-day Claims" value={extracted.previous_claims_same_day ? String(extracted.previous_claims_same_day) : '0'} />
           </div>
 
           {extracted.medicines?.length > 0 && (
