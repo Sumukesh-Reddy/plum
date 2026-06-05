@@ -8,6 +8,7 @@ export default function Dashboard() {
   const [claims, setClaims] = useState([]);
   const [loading, setLoading] = useState(true);
   const [backendOnline, setBackendOnline] = useState(null);
+  const [policy, setPolicy] = useState(null);
 
   useEffect(() => {
     claimApi.health()
@@ -18,6 +19,12 @@ export default function Dashboard() {
       .then(res => setClaims(res.data || []))
       .catch(() => setClaims([]))
       .finally(() => setLoading(false));
+
+    claimApi.getPolicy()
+      .then(res => {
+        if (res.success) setPolicy(res.data);
+      })
+      .catch(console.error);
   }, []);
 
   const stats = {
@@ -113,6 +120,22 @@ export default function Dashboard() {
             <span>Show trace</span>
           </div>
           <p>Manual review cases demonstrate the human-in-loop workflow best.</p>
+        </div>
+        <div className="insight-panel">
+          <div className="section-title">Active Policy Terms</div>
+          {policy ? (
+            <div style={{ fontSize: 13, marginTop: 8, lineHeight: '1.4' }}>
+              <div style={{ fontWeight: 700, color: '#2563eb', marginBottom: 6 }}>{policy.policy_name || 'Standard OPD Policy'}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '3px' }}>
+                <div>Limit: <strong>₹{policy.coverage_details?.per_claim_limit || 0} / claim</strong></div>
+                <div>Copay / Discount: <strong>{policy.coverage_details?.consultation_fees?.copay_percentage || 0}% / {policy.coverage_details?.consultation_fees?.network_discount || 0}%</strong></div>
+                <div>Exclusions: <strong>{policy.exclusions?.length || 0} items active</strong></div>
+              </div>
+            </div>
+          ) : (
+            <p>Loading policy configuration...</p>
+          )}
+          <p style={{ marginTop: 8 }}><Link to="/policy" style={{ color: '#2563eb', textDecoration: 'underline' }}>Edit settings</Link></p>
         </div>
       </div>
 

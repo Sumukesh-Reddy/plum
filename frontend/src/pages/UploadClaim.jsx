@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileImage, FileText, Info, ShieldCheck, Trash2, UploadCloud } from 'lucide-react';
+import { FileImage, FileText, Info, ShieldCheck, Trash2, UploadCloud, ClipboardList } from 'lucide-react';
 import { claimApi } from '../api/claimApi';
 
 export default function UploadClaim() {
@@ -11,7 +11,16 @@ export default function UploadClaim() {
   const [loadingStep, setLoadingStep] = useState(0);
   const [errorStep, setErrorStep] = useState(null);
   const [processingError, setProcessingError] = useState(null);
+  const [policy, setPolicy] = useState(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    claimApi.getPolicy()
+      .then(res => {
+        if (res.success) setPolicy(res.data);
+      })
+      .catch(console.error);
+  }, []);
 
   const addFiles = (newFiles) => {
     const allowed = Array.from(newFiles).filter(f =>
@@ -309,6 +318,49 @@ export default function UploadClaim() {
       </div>
 
       <aside className="upload-side">
+        {policy && (
+          <div className="card" style={{ borderTop: '4px solid #2563eb' }}>
+            <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <ClipboardList size={16} />
+              Active Policy Reference
+            </div>
+            <div style={{ fontSize: 12 }}>
+              <div style={{ fontWeight: 700, color: '#111827', borderBottom: '1px solid #eee', paddingBottom: 4, marginBottom: 6 }}>
+                {policy.policy_name || 'Standard OPD Policy'}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}>
+                <span style={{ color: '#64748b' }}>Per-Claim Limit:</span>
+                <strong style={{ color: '#111827' }}>₹{policy.coverage_details?.per_claim_limit?.toLocaleString('en-IN') || 0}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}>
+                <span style={{ color: '#64748b' }}>Consultation Copay:</span>
+                <strong style={{ color: '#111827' }}>{policy.coverage_details?.consultation_fees?.copay_percentage || 0}%</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}>
+                <span style={{ color: '#64748b' }}>Network Discount:</span>
+                <strong style={{ color: '#111827' }}>{policy.coverage_details?.consultation_fees?.network_discount || 0}%</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}>
+                <span style={{ color: '#64748b' }}>Waiting Period:</span>
+                <strong style={{ color: '#111827' }}>{policy.waiting_periods?.initial_waiting || 0} days</strong>
+              </div>
+              {policy.exclusions?.length > 0 && (
+                <div style={{ marginTop: 8 }}>
+                  <div style={{ fontWeight: 600, color: '#475569', marginBottom: 2 }}>Key Exclusions:</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {policy.exclusions.slice(0, 3).map((ex, idx) => (
+                      <span key={idx} style={{ background: '#f1f5f9', color: '#475569', padding: '2px 6px', borderRadius: '4px', fontSize: 10 }}>
+                        {ex}
+                      </span>
+                    ))}
+                    {policy.exclusions.length > 3 && <span style={{ fontSize: 10, color: '#888' }}>+{policy.exclusions.length - 3} more</span>}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="card">
           <div className="section-title">Claim Readiness</div>
           <div className="check-row good">

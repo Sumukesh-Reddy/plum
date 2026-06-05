@@ -11,6 +11,7 @@ Analyze the provided medical document and extract structured data.
 
 Return ONLY a valid JSON object with these exact fields (no markdown, no code fences):
 {
+  "document_type": "prescription | bill | report | other",
   "patient_name": "string or null",
   "doctor_name": "string or null",
   "doctor_reg": "registration number like MH/12345/2020 or null",
@@ -37,6 +38,61 @@ If the document mentions "Previous Claims Same Day", "same-day claims", or simil
 For money fields, ignore currency symbols such as ₹, Rs, INR, and commas.
 Important: never read the rupee symbol (₹) as the digit 2. For example, "₹1,061" means 1061, not 21061.
 When a bill has Sub Total, CGST, SGST, and Net Amount, use the printed Net Amount/Total as bill_amount and cross-check it equals the components.
+
+Few-shot examples for extraction:
+
+--- Example 1 (Prescription Document) ---
+Text / Image Content:
+"Apollo Clinics. Dr. Anand K, MBBS. Reg No: TN/48293/2012. Patient: Ramesh Kumar. Date: 12-Nov-2024. Diagnosis: Hypertension. Rx: Amlodipine 5mg once daily."
+Extracted JSON:
+{
+  "document_type": "prescription",
+  "patient_name": "Ramesh Kumar",
+  "doctor_name": "Dr. Anand K",
+  "doctor_reg": "TN/48293/2012",
+  "hospital_name": "Apollo Clinics",
+  "diagnosis": "Hypertension",
+  "medicines": ["Amlodipine 5mg once daily"],
+  "test_names": [],
+  "bill_amount": null,
+  "consultation_fee": null,
+  "treatment_date": "2024-11-12",
+  "submission_date": "2024-11-12",
+  "member_join_date": null,
+  "policy_active": true,
+  "member_covered": true,
+  "documents_legible": true,
+  "pre_auth": false,
+  "previous_claims_same_day": null,
+  "claim_id": null
+}
+
+--- Example 2 (Pharmacy Receipt / Bill Document) ---
+Text / Image Content:
+"Care Pharmacy, 21 Anna Salai, Chennai. Receipt #9342. Date: 15/10/2024. Patient: Ramesh Kumar. 1. Amlodipine 5mg - Qty 30: ₹961.00. 2. Consultation fee: ₹100.00. Total Net Amount Paid: ₹1,061.00."
+Extracted JSON:
+{
+  "document_type": "bill",
+  "patient_name": "Ramesh Kumar",
+  "doctor_name": null,
+  "doctor_reg": null,
+  "hospital_name": "Care Pharmacy",
+  "diagnosis": null,
+  "medicines": ["Amlodipine 5mg"],
+  "test_names": [],
+  "bill_amount": 1061,
+  "consultation_fee": 100,
+  "treatment_date": "2024-10-15",
+  "submission_date": "2024-10-15",
+  "member_join_date": null,
+  "policy_active": true,
+  "member_covered": true,
+  "documents_legible": true,
+  "pre_auth": false,
+  "previous_claims_same_day": null,
+  "claim_id": "9342"
+}
+
 Return ONLY the raw JSON object — no markdown, no explanation, no code blocks.`;
 
 const logGeminiExtraction = (source, raw, parsed, normalized) => {
@@ -142,6 +198,7 @@ const normalizeCount = (value) => {
 
 const normalizeExtractedData = (data) => {
   return {
+    document_type: data.document_type || 'other',
     patient_name: data.patient_name || null,
     doctor_name: data.doctor_name || null,
     doctor_reg: data.doctor_reg || '',

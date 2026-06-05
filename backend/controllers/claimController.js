@@ -291,10 +291,10 @@ exports.overrideClaim = async (req, res, next) => {
     const updatedDecision = {
       decision,
       approvedAmount: Number(approvedAmount) || 0,
-      rejectionReasons: decision === 'APPROVED' ? [] : (claim.decision?.rejectionReasons || []),
+      rejectionReasons: ['APPROVED', 'PARTIAL'].includes(decision) ? [] : (claim.decision?.rejectionReasons || []),
       confidenceScore: 1.0, // Manual override has 100% confidence
       notes: mergedNotes,
-      nextSteps: decision === 'APPROVED' ? 'Payout processed' : 'Claim rejected by manual reviewer'
+      nextSteps: ['APPROVED', 'PARTIAL'].includes(decision) ? 'Payout processed' : 'Claim rejected by manual reviewer'
     };
 
     // Update in DB
@@ -489,7 +489,18 @@ const mergeExtractedData = (primary, secondary) => {
     if (key === 'medicines' || key === 'test_names') {
       merged[key] = mergeUniqueArray(merged[key], secondary[key]);
     } else if (key === 'bill_amount' || key === 'consultation_fee') {
-      merged[key] = Math.max(Number(merged[key]) || 0, Number(secondary[key]) || 0);
+      const primaryIsBill = primary.document_type === 'bill';
+      const secondaryIsBill = secondary.document_type === 'bill';
+      const primaryVal = Number(primary[key]) || 0;
+      const secondaryVal = Number(secondary[key]) || 0;
+
+      if (primaryIsBill && !secondaryIsBill) {
+        merged[key] = primaryVal;
+      } else if (!primaryIsBill && secondaryIsBill) {
+        merged[key] = secondaryVal;
+      } else {
+        merged[key] = Math.max(primaryVal, secondaryVal);
+      }
     } else if (key === 'documents_legible') {
       merged[key] = merged[key] !== false || secondary[key] !== false;
     } else if (key === 'documents') {
@@ -500,6 +511,13 @@ const mergeExtractedData = (primary, secondary) => {
     } else if (isMissingValue(merged[key]) && !isMissingValue(secondary[key])) {
       merged[key] = secondary[key];
     }
+  }
+
+  // Preserve best document type classification
+  if (primary.document_type === 'bill' || secondary.document_type === 'bill') {
+    merged.document_type = 'bill';
+  } else if (primary.document_type === 'prescription' || secondary.document_type === 'prescription') {
+    merged.document_type = 'prescription';
   }
 
   return merged;
