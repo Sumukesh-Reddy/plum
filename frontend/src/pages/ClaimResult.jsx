@@ -621,7 +621,7 @@ export default function ClaimResult() {
 
                 const isImage = /\.(jpg|jpeg|png|webp)$/i.test(activeDoc.storedName || activeDoc.originalName || '') || 
                                 (activeDoc.mimetype && activeDoc.mimetype.startsWith('image/'));
-                const fileUrl = `${API_BASE}/uploads/${activeDoc.storedName}`;
+                const fileUrl = activeDoc.url || `${API_BASE}/uploads/${activeDoc.storedName}`;
 
                 return (
                   <div>

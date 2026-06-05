@@ -23,7 +23,8 @@ const claimSchema = new mongoose.Schema({
     storedName: String,
     mimetype: String,
     size: Number,
-    path: String
+    path: String,
+    url: String
   }],
   extractedData: { type: mongoose.Schema.Types.Mixed, default: {} },
   decision: {

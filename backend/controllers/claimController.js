@@ -82,6 +82,47 @@ exports.createClaim = async (req, res, next) => {
       throw new Error(`Could not extract any data from the uploaded documents. Underlying cause: ${realReason}`);
     }
 
+    // Upload files to Cloudinary if configured, updating documents list with URLs
+    const { uploadToCloudinary, isConfigured } = require('../services/cloudinaryService');
+    const documentsWithUrls = [];
+    if (isConfigured()) {
+      console.log('[Cloudinary] Uploading files to Cloudinary...');
+      for (const file of req.files) {
+        try {
+          const cloudinaryUrl = await uploadToCloudinary(file.path);
+          documentsWithUrls.push({
+            originalName: file.originalname,
+            storedName: file.filename,
+            mimetype: file.mimetype,
+            size: file.size,
+            path: file.path,
+            url: cloudinaryUrl
+          });
+        } catch (uploadErr) {
+          console.error(`[Cloudinary] Failed to upload ${file.originalname}:`, uploadErr.message);
+          // Fallback to storing local path details
+          documentsWithUrls.push({
+            originalName: file.originalname,
+            storedName: file.filename,
+            mimetype: file.mimetype,
+            size: file.size,
+            path: file.path
+          });
+        }
+      }
+    } else {
+      // Just copy the original documents info (local paths)
+      for (const file of req.files) {
+        documentsWithUrls.push({
+          originalName: file.originalname,
+          storedName: file.filename,
+          mimetype: file.mimetype,
+          size: file.size,
+          path: file.path
+        });
+      }
+    }
+
     // Check for duplicate claim in DB (similar patient, date and bill amount)
     let isDuplicate = false;
     let duplicateClaimId = null;
@@ -131,6 +172,7 @@ exports.createClaim = async (req, res, next) => {
       treatmentDate: extractedData.treatment_date ? new Date(extractedData.treatment_date) : null,
       billAmount: extractedData.bill_amount || 0,
       extractedData,
+      documents: documentsWithUrls,
       decision: {
         decision: adjudicationResult.decision,
         approvedAmount: adjudicationResult.approved_amount,
@@ -162,7 +204,7 @@ exports.createClaim = async (req, res, next) => {
         claimId,
         status: 'completed',
         processingTime,
-        documents,
+        documents: documentsWithUrls,
         extracted: extractedData,
         adjudication: {
           decision: adjudicationResult.decision,
