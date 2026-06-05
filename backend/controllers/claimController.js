@@ -162,6 +162,7 @@ exports.createClaim = async (req, res, next) => {
         claimId,
         status: 'completed',
         processingTime,
+        documents,
         extracted: extractedData,
         adjudication: {
           decision: adjudicationResult.decision,

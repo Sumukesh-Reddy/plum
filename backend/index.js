@@ -50,4 +50,26 @@ app.listen(PORT, () => {
   console.log(` Plum API Server running on port ${PORT}`);
 });
 
+// Keep-alive timer for Render free tier (non-blocking)
+const axios = require('axios');
+function keepalive() {
+  let i = 0;
+  setInterval(() => {
+    i = (i + 1) % 6;
+    console.log(`[keepalive] Server is alive. Tick count: ${i}`);
+  }, 30000); // 30 seconds
+
+  // Optional: ping public URL if defined on Render to prevent sleep
+  const renderUrl = process.env.RENDER_EXTERNAL_URL;
+  if (renderUrl) {
+    console.log(`[keepalive] Self-ping active for Render URL: ${renderUrl}`);
+    setInterval(() => {
+      axios.get(`${renderUrl}/health`)
+        .then(() => console.log('[keepalive] Self-ping successful'))
+        .catch(err => console.error('[keepalive] Self-ping failed:', err.message));
+    }, 10 * 60 * 1000); // 10 minutes
+  }
+}
+keepalive();
+
 module.exports = app;
