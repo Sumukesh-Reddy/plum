@@ -126,63 +126,65 @@ export default function ClaimHistory() {
             )}
           </div>
         ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Claim ID</th>
-                <th>Patient</th>
-                <th>Diagnosis</th>
-                <th>Date</th>
-                <th>Amount</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(claim => {
-                const decision = claim.decision?.decision;
-                const approved = claim.decision?.approved_amount;
-                return (
-                  <tr key={claim._id || claim.claimId}>
-                    <td>
-                      <Link to={`/claims/${claim.claimId}`} style={{ color: '#1d4ed8', fontFamily: 'monospace', fontSize: 12 }}>
-                        {claim.claimId}
-                      </Link>
-                    </td>
-                    <td>{claim.patientName || '—'}</td>
-                    <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {claim.diagnosis || '—'}
-                    </td>
-                    <td>
-                      {claim.createdAt
-                        ? new Date(claim.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-                        : '—'}
-                    </td>
-                    <td>
-                      {approved > 0
-                        ? <span style={{ color: '#16a34a', fontWeight: 600 }}>₹{approved.toLocaleString('en-IN')}</span>
-                        : claim.billAmount > 0
-                        ? `₹${claim.billAmount.toLocaleString('en-IN')}`
-                        : '—'}
-                    </td>
-                    <td>
-                      <StatusBadge status={decision || claim.status || 'pending'} />
-                    </td>
-                    <td>
-                      <button
-                        className="btn btn-danger"
-                        style={{ padding: '3px 10px', fontSize: 12 }}
-                        onClick={() => handleDelete(claim.claimId)}
-                        disabled={deleting === claim.claimId}
-                      >
-                        {deleteConfirm === claim.claimId ? 'Confirm?' : deleting === claim.claimId ? '...' : 'Delete'}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Claim ID</th>
+                  <th>Patient</th>
+                  <th>Diagnosis</th>
+                  <th>Date</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(claim => {
+                  const decision = claim.decision?.decision;
+                  const approved = claim.decision?.approved_amount;
+                  return (
+                    <tr key={claim._id || claim.claimId}>
+                      <td>
+                        <Link to={`/claims/${claim.claimId}`} style={{ color: '#1d4ed8', fontFamily: 'monospace', fontSize: 12 }}>
+                          {claim.claimId}
+                        </Link>
+                      </td>
+                      <td>{claim.patientName || '—'}</td>
+                      <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {claim.diagnosis || '—'}
+                      </td>
+                      <td>
+                        {claim.createdAt
+                          ? new Date(claim.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                          : '—'}
+                      </td>
+                      <td>
+                        {approved > 0
+                          ? <span style={{ color: '#16a34a', fontWeight: 600 }}>₹{approved.toLocaleString('en-IN')}</span>
+                          : claim.billAmount > 0
+                          ? `₹${claim.billAmount.toLocaleString('en-IN')}`
+                          : '—'}
+                      </td>
+                      <td>
+                        <StatusBadge status={decision || claim.status || 'pending'} />
+                      </td>
+                      <td>
+                        <button
+                          className="btn btn-danger"
+                          style={{ padding: '3px 10px', fontSize: 12 }}
+                          onClick={() => handleDelete(claim.claimId)}
+                          disabled={deleting === claim.claimId}
+                        >
+                          {deleteConfirm === claim.claimId ? 'Confirm?' : deleting === claim.claimId ? '...' : 'Delete'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

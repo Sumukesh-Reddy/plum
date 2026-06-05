@@ -124,7 +124,7 @@ export default function PolicyConfig() {
           Coverage Limits & Waiting Periods
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+        <div className="form-grid">
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
               Per-Claim Limit (₹)
@@ -207,7 +207,7 @@ export default function PolicyConfig() {
           Rule Arrays (One per line)
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+        <div className="form-grid">
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
               Network Hospitals

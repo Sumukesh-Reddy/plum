@@ -246,7 +246,7 @@ export default function ClaimResult() {
       )}
 
       {/* Split Layout for Preview Side Panel */}
-      <div className="upload-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 380px', gap: '20px', alignItems: 'start' }}>
+      <div className="claim-result-layout">
         <div style={{ minWidth: 0 }}>
           {/* Decision */}
           {adjudication && (

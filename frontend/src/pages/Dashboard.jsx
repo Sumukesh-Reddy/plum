@@ -167,40 +167,42 @@ export default function Dashboard() {
             </Link>
           </div>
         ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Claim ID</th>
-                <th>Patient</th>
-                <th>Diagnosis</th>
-                <th>Amount</th>
-                <th>Status</th>
-                <th>Confidence</th>
-              </tr>
-            </thead>
-            <tbody>
-              {claims.slice(0, 8).map(claim => (
-                <tr key={claim._id || claim.claimId}>
-                  <td>
-                    <Link to={`/claims/${claim.claimId}`} style={{ color: '#1d4ed8', fontFamily: 'monospace' }}>
-                      {claim.claimId}
-                    </Link>
-                  </td>
-                  <td>{claim.patientName || '—'}</td>
-                  <td>{claim.diagnosis || '—'}</td>
-                  <td>{claim.billAmount > 0 ? `₹${claim.billAmount.toLocaleString('en-IN')}` : '—'}</td>
-                  <td>
-                    <StatusBadge status={claim.decision?.decision || claim.status || 'pending'} />
-                  </td>
-                  <td>
-                    {claim.decision?.confidenceScore != null
-                      ? `${Math.round(claim.decision.confidenceScore * 100)}%`
-                      : '—'}
-                  </td>
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Claim ID</th>
+                  <th>Patient</th>
+                  <th>Diagnosis</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Confidence</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {claims.slice(0, 8).map(claim => (
+                  <tr key={claim._id || claim.claimId}>
+                    <td>
+                      <Link to={`/claims/${claim.claimId}`} style={{ color: '#1d4ed8', fontFamily: 'monospace' }}>
+                        {claim.claimId}
+                      </Link>
+                    </td>
+                    <td>{claim.patientName || '—'}</td>
+                    <td>{claim.diagnosis || '—'}</td>
+                    <td>{claim.billAmount > 0 ? `₹${claim.billAmount.toLocaleString('en-IN')}` : '—'}</td>
+                    <td>
+                      <StatusBadge status={claim.decision?.decision || claim.status || 'pending'} />
+                    </td>
+                    <td>
+                      {claim.decision?.confidenceScore != null
+                        ? `${Math.round(claim.decision.confidenceScore * 100)}%`
+                        : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

@@ -107,98 +107,102 @@ export default function EvaluationMetrics() {
       {/* Class Level Performance Table */}
       <div className="card" style={{ marginBottom: 24 }}>
         <div className="section-title" style={{ marginBottom: 12 }}>Performance by Decision Type</div>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Adjudication Class</th>
-              <th style={{ textAlign: 'right' }}>Precision</th>
-              <th style={{ textAlign: 'right' }}>Recall</th>
-              <th style={{ textAlign: 'right' }}>F1-Score</th>
-              <th style={{ textAlign: 'right' }}>Test Cases (Support)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.keys(classMetrics).map(cls => (
-              <tr key={cls}>
-                <td>
-                  <strong>{cls.replace(/_/g, ' ')}</strong>
-                </td>
-                <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>
-                  {Math.round(classMetrics[cls].precision * 100)}%
-                </td>
-                <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>
-                  {Math.round(classMetrics[cls].recall * 100)}%
-                </td>
-                <td style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 600, color: '#111827' }}>
-                  {Math.round(classMetrics[cls].f1Score * 100)}%
-                </td>
-                <td style={{ textAlign: 'right', color: '#666' }}>
-                  {classMetrics[cls].support}
-                </td>
+        <div className="table-container">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Adjudication Class</th>
+                <th style={{ textAlign: 'right' }}>Precision</th>
+                <th style={{ textAlign: 'right' }}>Recall</th>
+                <th style={{ textAlign: 'right' }}>F1-Score</th>
+                <th style={{ textAlign: 'right' }}>Test Cases (Support)</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {Object.keys(classMetrics).map(cls => (
+                <tr key={cls}>
+                  <td>
+                    <strong>{cls.replace(/_/g, ' ')}</strong>
+                  </td>
+                  <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>
+                    {Math.round(classMetrics[cls].precision * 100)}%
+                  </td>
+                  <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>
+                    {Math.round(classMetrics[cls].recall * 100)}%
+                  </td>
+                  <td style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 600, color: '#111827' }}>
+                    {Math.round(classMetrics[cls].f1Score * 100)}%
+                  </td>
+                  <td style={{ textAlign: 'right', color: '#666' }}>
+                    {classMetrics[cls].support}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Individual Test Cases Table */}
       <div className="card">
         <div className="section-title" style={{ marginBottom: 12 }}>Test Case Adjudication Trace</div>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Test Scenario</th>
-              <th>Expected</th>
-              <th>Actual</th>
-              <th style={{ textAlign: 'right' }}>Exp. Payout</th>
-              <th style={{ textAlign: 'right' }}>Act. Payout</th>
-              <th style={{ textAlign: 'center' }}>Result</th>
-            </tr>
-          </thead>
-          <tbody>
-            {results.map(res => (
-              <tr key={res.id}>
-                <td style={{ fontFamily: 'monospace', fontSize: 12, color: '#4b5563' }}>{res.id}</td>
-                <td>
-                  <div style={{ fontWeight: 600 }}>{res.name}</div>
-                  <div style={{ fontSize: 11, color: '#6b7280' }}>{res.description}</div>
-                </td>
-                <td>
-                  <span className={`badge badge-pending`} style={{ fontSize: 10, padding: '2px 6px' }}>
-                    {res.expectedDecision}
-                  </span>
-                </td>
-                <td>
-                  <span 
-                    className={`badge ${
-                      res.actualDecision === 'APPROVED' ? 'badge-approved' :
-                      res.actualDecision === 'REJECTED' ? 'badge-rejected' :
-                      res.actualDecision === 'PARTIAL' ? 'badge-partial' : 'badge-manual'
-                    }`} 
-                    style={{ fontSize: 10, padding: '2px 6px' }}
-                  >
-                    {res.actualDecision}
-                  </span>
-                </td>
-                <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>₹{res.expectedAmount.toLocaleString('en-IN')}</td>
-                <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>₹{res.actualAmount.toLocaleString('en-IN')}</td>
-                <td style={{ textAlign: 'center' }}>
-                  <span style={{ 
-                    color: res.passed ? '#15803d' : '#b91c1c', 
-                    fontWeight: 'bold',
-                    fontSize: 13,
-                    backgroundColor: res.passed ? '#f0fdf4' : '#fef2f2',
-                    padding: '4px 8px',
-                    borderRadius: '4px'
-                  }}>
-                    {res.passed ? 'PASS ✅' : 'FAIL ❌'}
-                  </span>
-                </td>
+        <div className="table-container">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Test Scenario</th>
+                <th>Expected</th>
+                <th>Actual</th>
+                <th style={{ textAlign: 'right' }}>Exp. Payout</th>
+                <th style={{ textAlign: 'right' }}>Act. Payout</th>
+                <th style={{ textAlign: 'center' }}>Result</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {results.map(res => (
+                <tr key={res.id}>
+                  <td style={{ fontFamily: 'monospace', fontSize: 12, color: '#4b5563' }}>{res.id}</td>
+                  <td>
+                    <div style={{ fontWeight: 600 }}>{res.name}</div>
+                    <div style={{ fontSize: 11, color: '#6b7280' }}>{res.description}</div>
+                  </td>
+                  <td>
+                    <span className={`badge badge-pending`} style={{ fontSize: 10, padding: '2px 6px' }}>
+                      {res.expectedDecision}
+                    </span>
+                  </td>
+                  <td>
+                    <span 
+                      className={`badge ${
+                        res.actualDecision === 'APPROVED' ? 'badge-approved' :
+                        res.actualDecision === 'REJECTED' ? 'badge-rejected' :
+                        res.actualDecision === 'PARTIAL' ? 'badge-partial' : 'badge-manual'
+                      }`} 
+                      style={{ fontSize: 10, padding: '2px 6px' }}
+                    >
+                      {res.actualDecision}
+                    </span>
+                  </td>
+                  <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>₹{res.expectedAmount.toLocaleString('en-IN')}</td>
+                  <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>₹{res.actualAmount.toLocaleString('en-IN')}</td>
+                  <td style={{ textAlign: 'center' }}>
+                    <span style={{ 
+                      color: res.passed ? '#15803d' : '#b91c1c', 
+                      fontWeight: 'bold',
+                      fontSize: 13,
+                      backgroundColor: res.passed ? '#f0fdf4' : '#fef2f2',
+                      padding: '4px 8px',
+                      borderRadius: '4px'
+                    }}>
+                      {res.passed ? 'PASS ✅' : 'FAIL ❌'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
